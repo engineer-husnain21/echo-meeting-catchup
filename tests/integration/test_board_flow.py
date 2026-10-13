@@ -75,3 +75,29 @@ def test_board_flow_when_llm_down_returns_503_and_app_keeps_running(setup) -> No
     assert response.status_code == 503
     assert "not available" in response.json()["message"]
     assert client.get("/api/v1/health").status_code == 200
+
+
+def test_board_flow_when_stance_fails_keeps_extractions_for_next_try(setup) -> None:  # type: ignore[no-untyped-def]
+    client, llm, topic_id = setup
+    llm.replies = (
+        extractor_replies()
+    )  # stance gets an empty queue -> {} is fine, so force a failure
+    original = llm.complete_json
+    count = {"n": 0}
+
+    async def fail_after_extractions(system: str, user: str):  # type: ignore[no-untyped-def]
+        count["n"] += 1
+        if count["n"] == 6:
+            from app.core.exceptions import ProviderError
+
+            raise ProviderError("The language model is busy (rate limit).")
+        return await original(system, user)
+
+    llm.complete_json = fail_after_extractions  # type: ignore[method-assign]
+    assert client.post(f"/api/v1/topics/{topic_id}/board/refresh").status_code == 503
+
+    llm.complete_json = original  # type: ignore[method-assign]
+    llm.calls.clear()
+    llm.replies = [stance_reply(), timeline_reply()]
+    assert client.post(f"/api/v1/topics/{topic_id}/board/refresh").status_code == 200
+    assert len(llm.calls) == 2  # no extraction was repeated

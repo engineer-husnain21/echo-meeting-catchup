@@ -50,9 +50,12 @@ class BoardService:
             )
 
         cached = await self._boards.get_extractions([m.id for m in meetings])
-        output = await self._orchestrator.run(BoardBuildInput(meetings=texts, cached=cached))
-        for meeting_id in output.new_extraction_ids:
-            await self._boards.save_extraction(meeting_id, output.extractions[meeting_id])
+        # Each new extraction is saved at once, so a later failure (for example a rate limit
+        # in the Stance agent) does not waste the tokens already spent.
+        output = await self._orchestrator.run(
+            BoardBuildInput(meetings=texts, cached=cached),
+            on_extracted=self._boards.save_extraction,
+        )
 
         board = self._merger.build(topic_id, meetings, all_lines, output)
         await self._boards.save_board(board)

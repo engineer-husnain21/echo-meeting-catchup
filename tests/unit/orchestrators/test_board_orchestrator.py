@@ -63,3 +63,15 @@ async def test_run_when_no_meetings_calls_nothing() -> None:
     llm = FakeLlmClient()
     output = await _orchestrator(llm).run(BoardBuildInput(meetings=[]))
     assert output.extractions == {} and llm.calls == []
+
+
+async def test_run_when_new_extraction_calls_on_extracted_at_once() -> None:
+    saved: list[int] = []
+
+    async def save(meeting_id: int, _: ExtractorOutput) -> None:
+        saved.append(meeting_id)
+
+    await _orchestrator(FakeLlmClient()).run(
+        BoardBuildInput(meetings=[_meeting(1, 3), _meeting(2, 3)]), on_extracted=save
+    )
+    assert saved == [1, 2]

@@ -1,9 +1,6 @@
 from datetime import date
 
-import pytest
-
 from app.agents.extractor_agent import ExtractorAgent
-from app.core.exceptions import ProviderError
 from app.core.prompt_loader import PromptLoader
 from app.schemas.extractor_input import ExtractorInput
 from tests.fakes.fake_llm_client import FakeLlmClient
@@ -37,7 +34,7 @@ async def test_run_when_llm_replies_returns_parsed_items() -> None:
     assert "<transcript>" in user and "Known subjects: hosting budget" in user
 
 
-async def test_run_when_reply_has_wrong_shape_raises_provider_error() -> None:
+async def test_run_when_reply_has_wrong_shape_returns_empty_lists() -> None:
     llm = FakeLlmClient([{"decisions": "not a list"}])
-    with pytest.raises(ProviderError):
-        await ExtractorAgent(llm, PromptLoader()).run(_input())
+    output = await ExtractorAgent(llm, PromptLoader()).run(_input())
+    assert output.decisions == [] and output.action_items == []

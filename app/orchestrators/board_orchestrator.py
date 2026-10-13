@@ -4,6 +4,7 @@ Agents never call each other; this class passes data between them. No DB access 
 """
 
 import re
+from collections.abc import Awaitable, Callable
 
 from app.agents.extractor_agent import ExtractorAgent
 from app.agents.stance_agent import StanceAgent
@@ -20,6 +21,7 @@ from app.schemas.timeline_output import TimelineOutput
 
 _logger = get_logger("board")
 _LINE_TAG = re.compile(r"^\[L")
+OnExtracted = Callable[[int, ExtractorOutput], Awaitable[None]]
 
 
 class BoardOrchestrator:
@@ -37,7 +39,10 @@ class BoardOrchestrator:
         self._window_lines = window_lines
         self._stance_max_lines = stance_max_lines
 
-    async def run(self, input: BoardBuildInput) -> BoardBuildOutput:
+    async def run(
+        self, input: BoardBuildInput, on_extracted: OnExtracted | None = None
+    ) -> BoardBuildOutput:
+        """on_extracted lets the caller save each new extraction at once (no DB access here)."""
         extractions: dict[int, ExtractorOutput] = {}
         new_ids: list[int] = []
         subjects: list[str] = []
@@ -46,6 +51,8 @@ class BoardOrchestrator:
             if output is None:
                 output = await self._extract(meeting, subjects)
                 new_ids.append(meeting.meeting_id)
+                if on_extracted:
+                    await on_extracted(meeting.meeting_id, output)
             extractions[meeting.meeting_id] = output
             subjects = _merge_subjects(subjects, output)
 
