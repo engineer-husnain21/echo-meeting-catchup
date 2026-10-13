@@ -75,3 +75,21 @@ async def test_run_when_new_extraction_calls_on_extracted_at_once() -> None:
         BoardBuildInput(meetings=[_meeting(1, 3), _meeting(2, 3)]), on_extracted=save
     )
     assert saved == [1, 2]
+
+
+async def test_run_when_second_meeting_passes_known_items_with_owner() -> None:
+    first = {
+        "action_items": [
+            {
+                "subject": "ingestion prototype",
+                "task": "Build it",
+                "owner": "Hussnain Razaq",
+                "due": "Friday",
+                "lines": [1],
+            }
+        ]
+    }
+    llm = FakeLlmClient([first, {}, {}])
+    await _orchestrator(llm).run(BoardBuildInput(meetings=[_meeting(1, 3), _meeting(2, 3)]))
+    second_prompt = llm.calls[1][1]
+    assert "ingestion prototype | action | owner=Hussnain Razaq | due Friday" in second_prompt

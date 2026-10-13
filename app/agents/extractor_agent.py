@@ -10,10 +10,12 @@ class ExtractorAgent(BaseAgent[ExtractorInput, ExtractorOutput]):
 
     async def run(self, input: ExtractorInput) -> ExtractorOutput:
         known = ", ".join(input.known_subjects) or "(none yet)"
+        items = "\n".join(f"- {item}" for item in input.known_items) or "(none yet)"
         user_text = (
             f"Meeting: {input.meeting_title} on {input.meeting_date.isoformat()}\n"
             f"Speakers: {', '.join(input.speakers)}\n"
-            f"Known subjects: {known}\n\n"
+            f"Known subjects: {known}\n"
+            f"Known items from earlier meetings (subject | type | details):\n{items}\n\n"
             f"<transcript>\n{input.transcript}\n</transcript>"
         )
         return await self._ask("extractor_system", user_text, ExtractorOutput)

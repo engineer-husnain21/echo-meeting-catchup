@@ -30,8 +30,12 @@ class BoardService:
         self._orchestrator = orchestrator
         self._merger = merger
 
-    async def refresh(self, topic_id: int) -> BoardResponse:
-        """Re-run the agents (old meetings come from the cache) and store the new board."""
+    async def refresh(self, topic_id: int, rebuild: bool = False) -> BoardResponse:
+        """Re-run the agents and store the new board.
+
+        Old meetings come from the extraction cache unless rebuild is True
+        (use rebuild after changing the Extractor prompt).
+        """
         await self._require_topic(topic_id)
         meetings = await self._meetings.list_by_topic(topic_id)
         all_lines: list[MeetingLine] = []
@@ -49,7 +53,7 @@ class BoardService:
                 )
             )
 
-        cached = await self._boards.get_extractions([m.id for m in meetings])
+        cached = {} if rebuild else await self._boards.get_extractions([m.id for m in meetings])
         # Each new extraction is saved at once, so a later failure (for example a rate limit
         # in the Stance agent) does not waste the tokens already spent.
         output = await self._orchestrator.run(

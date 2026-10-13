@@ -18,8 +18,11 @@ async def get_board(topic_id: int, service: BoardServiceDep) -> BoardResponse:
 
 
 @router.post("/refresh", response_model=BoardResponse)
-async def refresh_board(topic_id: int, service: BoardServiceDep) -> BoardResponse:
-    return await service.refresh(topic_id)
+async def refresh_board(
+    topic_id: int, service: BoardServiceDep, rebuild: bool = False
+) -> BoardResponse:
+    """rebuild=true ignores cached extractions and re-reads every meeting."""
+    return await service.refresh(topic_id, rebuild=rebuild)
 
 
 @router.get("/my-action-items", response_model=list[BoardActionItem])

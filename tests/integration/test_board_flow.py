@@ -101,3 +101,23 @@ def test_board_flow_when_stance_fails_keeps_extractions_for_next_try(setup) -> N
     llm.replies = [stance_reply(), timeline_reply()]
     assert client.post(f"/api/v1/topics/{topic_id}/board/refresh").status_code == 200
     assert len(llm.calls) == 2  # no extraction was repeated
+
+
+def test_board_flow_when_rebuild_ignores_cache(setup) -> None:  # type: ignore[no-untyped-def]
+    client, llm, topic_id = setup
+    client.post(f"/api/v1/topics/{topic_id}/board/refresh")
+    llm.calls.clear()
+    llm.replies = [*extractor_replies(), stance_reply(), timeline_reply()]
+    response = client.post(f"/api/v1/topics/{topic_id}/board/refresh", params={"rebuild": "true"})
+    assert response.status_code == 200
+    assert len(llm.calls) == 7  # all five meetings were read again
+
+
+def test_board_flow_when_stance_quotes_other_speakers_drops_them(setup) -> None:  # type: ignore[no-untyped-def]
+    client, llm, topic_id = setup
+    reply = stance_reply()
+    # Meeting 2 line 11 is spoken by Maya, not Priya: it must not be used as Priya's proof.
+    reply["stances"][0]["evidence"].append({"meeting_id": 2, "line": 11})
+    llm.replies = [*extractor_replies(), reply, timeline_reply()]
+    board = client.post(f"/api/v1/topics/{topic_id}/board/refresh").json()
+    assert {q["speaker"] for q in board["stances"][0]["quotes"]} == {"Priya Nair"}

@@ -66,6 +66,9 @@ class BoardMergeService:
         return board
 
     def _quotes(self, refs: list[LineRef]) -> list[Quote]:
+        return self._quotes_all(refs)[:MAX_QUOTES]
+
+    def _quotes_all(self, refs: list[LineRef]) -> list[Quote]:
         quotes: list[Quote] = []
         for ref in refs:
             line = self._lines.get((ref.meeting_id, ref.line))
@@ -87,7 +90,7 @@ class BoardMergeService:
                     text=line.text,
                 )
             )
-        return quotes[:MAX_QUOTES]
+        return quotes
 
     def _local(self, meeting_id: int, lines: list[int]) -> list[Quote]:
         return self._quotes([LineRef(meeting_id=meeting_id, line=n) for n in lines])
@@ -173,8 +176,11 @@ class BoardMergeService:
     def _stances(self, output: BoardBuildOutput) -> list[BoardStance]:
         stances: list[BoardStance] = []
         for s in output.stances.stances:
-            quotes = self._quotes(s.evidence)
-            if len(quotes) < 2:  # a hidden stance needs at least two proof lines
+            own_lines = [
+                q for q in self._quotes_all(s.evidence) if _same_person(q.speaker, s.person)
+            ]
+            quotes = own_lines[:MAX_QUOTES]
+            if len(quotes) < 2:  # a hidden stance needs two proof lines spoken by that person
                 self._dropped += 1
                 continue
             stances.append(
@@ -209,6 +215,10 @@ class BoardMergeService:
                 )
             )
         return sorted(entries, key=lambda e: (e.meeting_date, e.meeting_id))
+
+
+def _same_person(speaker: str, person: str) -> bool:
+    return speaker.strip().lower() == person.strip().lower()
 
 
 def _key(subject: str) -> str:

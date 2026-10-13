@@ -21,6 +21,7 @@ from app.schemas.timeline_output import TimelineOutput
 
 _logger = get_logger("board")
 _LINE_TAG = re.compile(r"^\[L")
+_MAX_KNOWN_ITEMS = 40
 OnExtracted = Callable[[int, ExtractorOutput], Awaitable[None]]
 
 
@@ -46,15 +47,17 @@ class BoardOrchestrator:
         extractions: dict[int, ExtractorOutput] = {}
         new_ids: list[int] = []
         subjects: list[str] = []
+        known_items: dict[str, str] = {}
         for meeting in input.meetings:
             output = input.cached.get(meeting.meeting_id)
             if output is None:
-                output = await self._extract(meeting, subjects)
+                output = await self._extract(meeting, subjects, list(known_items.values()))
                 new_ids.append(meeting.meeting_id)
                 if on_extracted:
                     await on_extracted(meeting.meeting_id, output)
             extractions[meeting.meeting_id] = output
             subjects = _merge_subjects(subjects, output)
+            known_items.update(_known_items(output))
 
         if not input.meetings:
             return BoardBuildOutput(
@@ -66,7 +69,9 @@ class BoardOrchestrator:
             extractions=extractions, new_extraction_ids=new_ids, stances=stances, timeline=timeline
         )
 
-    async def _extract(self, meeting: MeetingText, subjects: list[str]) -> ExtractorOutput:
+    async def _extract(
+        self, meeting: MeetingText, subjects: list[str], known_items: list[str]
+    ) -> ExtractorOutput:
         """Long meetings are read in windows so each call stays under the token limit."""
         combined = ExtractorOutput()
         windows = range(0, len(meeting.lines), self._window_lines)
@@ -81,6 +86,7 @@ class BoardOrchestrator:
                     speakers=meeting.speakers,
                     transcript="\n".join(meeting.lines[start : start + self._window_lines]),
                     known_subjects=subjects,
+                    known_items=known_items[-_MAX_KNOWN_ITEMS:],
                 )
             )
             combined.decisions.extend(part.decisions)
@@ -128,3 +134,17 @@ def _merge_subjects(subjects: list[str], output: ExtractorOutput) -> list[str]:
         for item in group
     ]
     return list(dict.fromkeys([*subjects, *(s.strip().lower() for s in found)]))
+
+
+def _known_items(output: ExtractorOutput) -> dict[str, str]:
+    """Latest state per subject, for example 'ingestion prototype | action | owner=... | ...'."""
+    items: dict[str, str] = {}
+    for d in output.decisions:
+        items[d.subject.strip().lower()] = f"{d.subject} | decision | {d.summary}"
+    for a in output.action_items:
+        owner = a.owner or "Unassigned"
+        due = f" | due {a.due}" if a.due else ""
+        items[a.subject.strip().lower()] = f"{a.subject} | action | owner={owner}{due} | {a.task}"
+    for o in output.open_items:
+        items.setdefault(o.subject.strip().lower(), f"{o.subject} | open | {o.question}")
+    return items

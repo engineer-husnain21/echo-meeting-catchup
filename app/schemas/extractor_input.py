@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExtractorInput(BaseModel):
@@ -11,3 +11,4 @@ class ExtractorInput(BaseModel):
     speakers: list[str]
     transcript: str  # lines formatted as "[L12 05:31] Speaker: text"
     known_subjects: list[str]  # subjects from earlier meetings, reused for consistent keys
+    known_items: list[str] = Field(default_factory=list)  # latest state of earlier items
