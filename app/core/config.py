@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     llm_reasoning_effort: str = "low"
     llm_max_tokens: int = 4000
     llm_timeout_seconds: int = 60
+    llm_rate_limit_retries: int = 3
 
     embedding_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     embedding_api_key: SecretStr = SecretStr("")
@@ -43,6 +44,8 @@ class Settings(BaseSettings):
     max_upload_mb: int = 20
     chunk_lines: int = 6
     chunk_overlap_lines: int = 2
+    extract_window_lines: int = 150
+    stance_max_lines: int = 400
 
 
 @lru_cache

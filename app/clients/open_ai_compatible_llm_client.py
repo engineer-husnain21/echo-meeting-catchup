@@ -1,5 +1,6 @@
 """Chat completions through any OpenAI-compatible endpoint (Groq by default)."""
 
+import asyncio
 import json
 from typing import Any
 
@@ -10,6 +11,8 @@ from app.core.logging import get_logger
 
 _logger = get_logger("llm")
 _JSON_ATTEMPTS = 2
+_DEFAULT_WAIT_SECONDS = 10.0
+_MAX_WAIT_SECONDS = 30.0
 
 
 class OpenAiCompatibleLlmClient:
@@ -21,6 +24,7 @@ class OpenAiCompatibleLlmClient:
         max_tokens: int,
         timeout_seconds: int,
         reasoning_effort: str = "",
+        rate_limit_retries: int = 3,
     ) -> None:
         self._client = AsyncOpenAI(
             base_url=base_url, api_key=api_key or "missing-key", timeout=timeout_seconds
@@ -28,6 +32,7 @@ class OpenAiCompatibleLlmClient:
         self._model = model
         self._max_tokens = max_tokens
         self._extra_body = {"reasoning_effort": reasoning_effort} if reasoning_effort else None
+        self._rate_limit_retries = rate_limit_retries
 
     async def complete_json(self, system: str, user: str) -> dict[str, Any]:
         for attempt in range(1, _JSON_ATTEMPTS + 1):
@@ -42,6 +47,21 @@ class OpenAiCompatibleLlmClient:
         raise ProviderError("The language model gave an unreadable answer. Please try again.")
 
     async def _complete(self, system: str, user: str) -> str:
+        for attempt in range(self._rate_limit_retries + 1):
+            try:
+                return await self._complete_once(system, user)
+            except RateLimitError as error:
+                if attempt == self._rate_limit_retries:
+                    _logger.warning("LLM rate limited, giving up: %r", error)
+                    raise ProviderError(
+                        "The language model is busy (rate limit). Try again in a minute."
+                    ) from error
+                wait = _retry_after(error)
+                _logger.info("LLM rate limited, waiting %.0fs (retry %d)", wait, attempt + 1)
+                await asyncio.sleep(wait)
+        raise ProviderError("The language model is not available right now.")
+
+    async def _complete_once(self, system: str, user: str) -> str:
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,
@@ -51,11 +71,8 @@ class OpenAiCompatibleLlmClient:
                 temperature=0,
                 extra_body=self._extra_body,
             )
-        except RateLimitError as error:
-            _logger.warning("LLM rate limited: %r", error)
-            raise ProviderError(
-                "The language model is busy (rate limit). Try again soon."
-            ) from error
+        except RateLimitError:
+            raise  # handled with waits in _complete
         except APIError as error:
             _logger.warning("LLM request failed: %r", error)
             raise ProviderError("The language model is not available right now.") from error
@@ -63,6 +80,15 @@ class OpenAiCompatibleLlmClient:
         if usage:
             _logger.info("LLM tokens: in=%d out=%d", usage.prompt_tokens, usage.completion_tokens)
         return response.choices[0].message.content or ""
+
+
+def _retry_after(error: RateLimitError) -> float:
+    """Seconds to wait, from the provider's retry-after header when present."""
+    header = error.response.headers.get("retry-after") if error.response is not None else None
+    try:
+        return min(float(header), _MAX_WAIT_SECONDS) if header else _DEFAULT_WAIT_SECONDS
+    except ValueError:
+        return _DEFAULT_WAIT_SECONDS
 
 
 def _strip_fences(text: str) -> str:

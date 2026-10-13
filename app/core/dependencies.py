@@ -8,16 +8,26 @@ from fastapi import Depends
 from qdrant_client import AsyncQdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.extractor_agent import ExtractorAgent
+from app.agents.stance_agent import StanceAgent
+from app.agents.timeline_agent import TimelineAgent
 from app.clients.embedding_client import EmbeddingClient
+from app.clients.llm_client import LlmClient
 from app.clients.open_ai_compatible_embedding_client import OpenAiCompatibleEmbeddingClient
+from app.clients.open_ai_compatible_llm_client import OpenAiCompatibleLlmClient
 from app.core.config import Settings, get_settings
+from app.core.prompt_loader import PromptLoader
 from app.db.database import Database
+from app.orchestrators.board_orchestrator import BoardOrchestrator
 from app.parsers.docx_transcript_parser import DocxTranscriptParser
 from app.parsers.txt_transcript_parser import TxtTranscriptParser
 from app.parsers.vtt_transcript_parser import VttTranscriptParser
+from app.repositories.board_repository import BoardRepository
 from app.repositories.chunk_vector_repository import ChunkVectorRepository
 from app.repositories.meeting_repository import MeetingRepository
 from app.repositories.topic_repository import TopicRepository
+from app.services.board_merge_service import BoardMergeService
+from app.services.board_service import BoardService
 from app.services.meeting_service import MeetingService
 from app.services.meeting_upload_service import MeetingUploadService
 from app.services.topic_service import TopicService
@@ -104,3 +114,44 @@ def get_meeting_upload_service(
 
 def get_meeting_service(session: SessionDep) -> MeetingService:
     return MeetingService(TopicRepository(session), MeetingRepository(session))
+
+
+@lru_cache
+def get_llm_client() -> LlmClient:
+    settings = get_settings()
+    return OpenAiCompatibleLlmClient(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key.get_secret_value(),
+        model=settings.llm_model,
+        max_tokens=settings.llm_max_tokens,
+        timeout_seconds=settings.llm_timeout_seconds,
+        reasoning_effort=settings.llm_reasoning_effort,
+        rate_limit_retries=settings.llm_rate_limit_retries,
+    )
+
+
+def get_board_orchestrator(
+    llm: Annotated[LlmClient, Depends(get_llm_client)],
+) -> BoardOrchestrator:
+    settings = get_settings()
+    prompts = PromptLoader()
+    return BoardOrchestrator(
+        extractor=ExtractorAgent(llm, prompts),
+        stance=StanceAgent(llm, prompts),
+        timeline=TimelineAgent(llm, prompts),
+        window_lines=settings.extract_window_lines,
+        stance_max_lines=settings.stance_max_lines,
+    )
+
+
+def get_board_service(
+    session: SessionDep,
+    orchestrator: Annotated[BoardOrchestrator, Depends(get_board_orchestrator)],
+) -> BoardService:
+    return BoardService(
+        TopicRepository(session),
+        MeetingRepository(session),
+        BoardRepository(session),
+        orchestrator,
+        BoardMergeService(),
+    )

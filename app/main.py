@@ -11,7 +11,7 @@ from app.core.logging import configure_logging
 from app.middlewares.error_handler_middleware import ErrorHandlerMiddleware
 from app.middlewares.logging_middleware import LoggingMiddleware
 from app.middlewares.request_id_middleware import RequestIdMiddleware
-from app.routers import health_router, meeting_router, topic_router
+from app.routers import board_router, health_router, meeting_router, topic_router
 
 
 @asynccontextmanager
@@ -38,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router.router)
     app.include_router(topic_router.router)
     app.include_router(meeting_router.router)
+    app.include_router(board_router.router)
     return app
 
 

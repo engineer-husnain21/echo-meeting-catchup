@@ -62,3 +62,30 @@ async def test_complete_json_when_provider_down_raises_provider_error(monkeypatc
     monkeypatch.setattr(client._client.chat.completions, "create", failing)
     with pytest.raises(ProviderError):
         await client.complete_json("sys", "user")
+
+
+async def test_complete_json_when_rate_limited_waits_and_retries(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from openai import RateLimitError
+
+    import app.clients.open_ai_compatible_llm_client as module
+
+    client = _client()
+    waits: list[float] = []
+    calls: list[int] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    async def fake_create(**_: Any) -> SimpleNamespace:
+        calls.append(1)
+        if len(calls) == 1:
+            response = httpx.Response(
+                429, headers={"retry-after": "2"}, request=httpx.Request("POST", "https://x")
+            )
+            raise RateLimitError("rate limited", response=response, body=None)
+        return _reply('{"ok": 1}')
+
+    monkeypatch.setattr(module.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(client._client.chat.completions, "create", fake_create)
+    assert await client.complete_json("s", "u") == {"ok": 1}
+    assert waits == [2.0]

@@ -27,7 +27,7 @@ class TranscriptChunkingService:
                     last_line=window[-1].line_number,
                     start_seconds=window[0].start_seconds,
                     speakers=list(dict.fromkeys(line.speaker for line in window)),
-                    text="\n".join(self._format_line(line) for line in window),
+                    text="\n".join(self.format_line(line) for line in window),
                 )
             )
             if start + self._size >= len(lines):
@@ -35,7 +35,7 @@ class TranscriptChunkingService:
         return chunks
 
     @staticmethod
-    def _format_line(line: MeetingLine) -> str:
+    def format_line(line: MeetingLine) -> str:
         """'[L12 05:31] Maya Chen: text' so the LLM can cite exact lines."""
         if line.start_seconds is None:
             return f"[L{line.line_number}] {line.speaker}: {line.text}"

@@ -10,6 +10,7 @@ from app.core.dependencies import (
     get_chunk_vector_repository,
     get_database,
     get_embedding_client,
+    get_llm_client,
     get_transcript_chunking_service,
     get_transcript_parsing_service,
 )
@@ -41,6 +42,7 @@ _CACHED = (
     get_transcript_parsing_service,
     get_transcript_chunking_service,
     get_embedding_client,
+    get_llm_client,
     get_chunk_vector_repository,
 )
 
