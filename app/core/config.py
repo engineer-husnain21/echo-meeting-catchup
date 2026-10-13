@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_api_key: SecretStr = SecretStr("")
     llm_model: str = "openai/gpt-oss-120b"
+    llm_reasoning_effort: str = "low"
+    llm_max_tokens: int = 4000
+    llm_timeout_seconds: int = 60
 
     embedding_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     embedding_api_key: SecretStr = SecretStr("")
