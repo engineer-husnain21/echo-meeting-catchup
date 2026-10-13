@@ -1,0 +1,41 @@
+WEBVTT
+
+1
+00:00:04.000 --> 00:00:08.000
+<v Maya Chen>Thanks for joining this unplanned call. It's about the database.</v>
+
+2
+00:00:10.000 --> 00:00:22.000
+<v Daniel Brooks>Over the weekend we hit the storage cap of the MongoDB Atlas tier in staging. And Sam pointed out that our reporting queries need joins across events and customers.</v>
+
+3
+00:00:24.000 --> 00:00:30.000
+<v Priya Nair>Postgres with a JSONB column for properties handles both. That's what I suggested on October fifth.</v>
+
+4
+00:00:32.000 --> 00:00:40.000
+<v Daniel Brooks>You did. I was wrong on that one. I propose we go back to PostgreSQL, with JSONB for the event properties.</v>
+
+5
+00:00:42.000 --> 00:00:48.000
+<v Omar Haddad>The Postgres instance from week one is still running, so switching back is quick.</v>
+
+6
+00:00:50.000 --> 00:00:59.000
+<v Maya Chen>Decision: we move back to PostgreSQL with JSONB, and MongoDB is dropped. The reasons are the storage cap and the reporting joins.</v>
+
+7
+00:01:01.000 --> 00:01:09.000
+<v Maya Chen>Hussnain's ingestion prototype now has to write to PostgreSQL instead of MongoDB, so his due date moves to Wednesday, October fourteenth.</v>
+
+8
+00:01:11.000 --> 00:01:14.000
+<v Omar Haddad>I'll send him the Postgres connection details again.</v>
+
+9
+00:01:16.000 --> 00:01:20.000
+<v Maya Chen>The runbook is still unowned. It stays on the risk list.</v>
+
+10
+00:01:22.000 --> 00:01:25.000
+<v Maya Chen>That's all, thanks.</v>

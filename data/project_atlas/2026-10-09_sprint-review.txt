@@ -1,0 +1,16 @@
+[00:00:04] Maya Chen: Sprint review. Let's go around. Daniel?
+[00:00:09] Daniel Brooks: The architecture doc is updated with MongoDB. The dashboard reads from the event store and refreshes every five seconds in staging.
+[00:00:19] Maya Chen: Excellent. Priya?
+[00:00:24] Priya Nair: The queue is stable. I also kept the batch job script in the repo, just in case. I'd rather have the fallback ready.
+[00:00:35] Daniel Brooks: That's fine.
+[00:00:40] Omar Haddad: Staging is green. One concern: the MongoDB Atlas tier we picked caps storage, so if retention is one year we'll outgrow it.
+[00:00:51] Maya Chen: Which brings us back to retention. Still no answer from the client. I'll escalate on Monday.
+[00:00:59] Maya Chen: Hussnain's ingestion prototype: he messaged that it's ninety percent done and needs one more day. So it moves to Monday, October twelfth. It's still his.
+[00:01:11] Maya Chen: The runbook is still unowned. That's now a risk for go-live.
+[00:01:17] Daniel Brooks: Agreed, it's a risk.
+[00:01:22] Maya Chen: Let's list it as a risk in the status report.
+[00:01:28] Maya Chen: Client demo date: we confirmed Friday, October sixteenth.
+[00:01:33] Omar Haddad: I'll freeze staging on the fifteenth.
+[00:01:38] Maya Chen: Authentication: still waiting for the client's single sign-on docs.
+[00:01:44] Maya Chen: Budget check: hosting is at three hundred eighty out of four hundred dollars. On the team budget, the contractor is approved and there's nothing more to spend.
+[00:01:57] Maya Chen: Good work everyone. Have a nice weekend.

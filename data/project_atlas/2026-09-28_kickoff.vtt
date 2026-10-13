@@ -1,0 +1,101 @@
+WEBVTT
+
+1
+00:00:04.000 --> 00:00:15.000
+<v Maya Chen>Morning everyone. This is the kickoff for Project Atlas, the rebuild of the customer analytics dashboard. The goal is a working demo for the client by mid October.</v>
+
+2
+00:00:17.000 --> 00:00:27.000
+<v Daniel Brooks>Thanks Maya. Quick context: the current dashboard runs nightly batch jobs, so the numbers are always a day old. The client wants near real time.</v>
+
+3
+00:00:29.000 --> 00:00:34.000
+<v Maya Chen>Right, that's the main ask. Near real time numbers on the main dashboard.</v>
+
+4
+00:00:36.000 --> 00:00:47.000
+<v Daniel Brooks>So my proposal is the new approach we talked about: an event-driven pipeline. Every user action becomes an event, we stream it, and the dashboard updates within seconds.</v>
+
+5
+00:00:49.000 --> 00:00:59.000
+<v Priya Nair>I understand the goal. I'm just not sure we need streaming for this. A batch job every fifteen minutes would get us most of the way.</v>
+
+6
+00:01:01.000 --> 00:01:04.000
+<v Daniel Brooks>Fifteen minutes isn't real time though.</v>
+
+7
+00:01:06.000 --> 00:01:12.000
+<v Priya Nair>True. I'm only saying event-driven adds a lot of moving parts for a five person team.</v>
+
+8
+00:01:14.000 --> 00:01:21.000
+<v Maya Chen>Let's not decide the architecture today. Daniel, can you write a one-page comparison of both options by Wednesday?</v>
+
+9
+00:01:23.000 --> 00:01:26.000
+<v Daniel Brooks>Sure, I'll have it by Wednesday.</v>
+
+10
+00:01:28.000 --> 00:01:34.000
+<v Maya Chen>Next, the database. We need to pick one so Omar can start on infrastructure.</v>
+
+11
+00:01:36.000 --> 00:01:42.000
+<v Priya Nair>I'd go with PostgreSQL. We all know it, and it handles our reporting queries well.</v>
+
+12
+00:01:44.000 --> 00:01:50.000
+<v Omar Haddad>Fine by me. Managed Postgres is easy to set up on our cloud account.</v>
+
+13
+00:01:52.000 --> 00:01:55.000
+<v Hussnain Razaq>Agreed, Postgres works for the API side too.</v>
+
+14
+00:01:57.000 --> 00:02:00.000
+<v Daniel Brooks>No objection.</v>
+
+15
+00:02:02.000 --> 00:02:05.000
+<v Maya Chen>Then it's decided: PostgreSQL is our main database.</v>
+
+16
+00:02:07.000 --> 00:02:13.000
+<v Maya Chen>Hosting budget. The client approved four hundred dollars a month for hosting during the pilot.</v>
+
+17
+00:02:15.000 --> 00:02:21.000
+<v Omar Haddad>That's tight if we add a streaming service, but fine for Postgres and two app servers.</v>
+
+18
+00:02:23.000 --> 00:02:30.000
+<v Maya Chen>Noted. Hussnain, you'll own the ingestion API, the endpoint that receives user events from the client app.</v>
+
+19
+00:02:32.000 --> 00:02:38.000
+<v Hussnain Razaq>Got it. I'll write the API contract first and share it in the channel by Wednesday.</v>
+
+20
+00:02:40.000 --> 00:02:43.000
+<v Maya Chen>Great. Omar, infrastructure?</v>
+
+21
+00:02:45.000 --> 00:02:50.000
+<v Omar Haddad>Yes, I'll set up the staging environment and the Postgres instance this week.</v>
+
+22
+00:02:52.000 --> 00:03:00.000
+<v Maya Chen>Last thing, data retention. The client hasn't said whether they want ninety days or a full year of history.</v>
+
+23
+00:03:02.000 --> 00:03:08.000
+<v Priya Nair>That changes storage cost a lot, so we need an answer before we size the database.</v>
+
+24
+00:03:10.000 --> 00:03:14.000
+<v Maya Chen>I'll ask the client. Let's park it for now.</v>
+
+25
+00:03:16.000 --> 00:03:19.000
+<v Maya Chen>That's it for today. Thanks all.</v>
