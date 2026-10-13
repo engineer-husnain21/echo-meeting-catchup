@@ -5,16 +5,23 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
+from qdrant_client import AsyncQdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.clients.embedding_client import EmbeddingClient
+from app.clients.open_ai_compatible_embedding_client import OpenAiCompatibleEmbeddingClient
 from app.core.config import Settings, get_settings
 from app.db.database import Database
 from app.parsers.docx_transcript_parser import DocxTranscriptParser
 from app.parsers.txt_transcript_parser import TxtTranscriptParser
 from app.parsers.vtt_transcript_parser import VttTranscriptParser
+from app.repositories.chunk_vector_repository import ChunkVectorRepository
 from app.repositories.meeting_repository import MeetingRepository
 from app.repositories.topic_repository import TopicRepository
+from app.services.meeting_service import MeetingService
+from app.services.meeting_upload_service import MeetingUploadService
 from app.services.topic_service import TopicService
+from app.services.transcript_chunking_service import TranscriptChunkingService
 from app.services.transcript_parsing_service import TranscriptParsingService
 
 
@@ -49,3 +56,50 @@ def get_transcript_parsing_service() -> TranscriptParsingService:
 
 def get_topic_service(session: SessionDep) -> TopicService:
     return TopicService(TopicRepository(session), MeetingRepository(session))
+
+
+@lru_cache
+def get_embedding_client() -> EmbeddingClient:
+    settings = get_settings()
+    return OpenAiCompatibleEmbeddingClient(
+        base_url=settings.embedding_base_url,
+        api_key=settings.embedding_api_key.get_secret_value(),
+        model=settings.embedding_model,
+        dimensions=settings.embedding_dimensions,
+        batch_size=settings.embedding_batch_size,
+        passage_task=settings.embedding_passage_task,
+        query_task=settings.embedding_query_task,
+    )
+
+
+@lru_cache
+def get_chunk_vector_repository() -> ChunkVectorRepository:
+    settings = get_settings()
+    client = AsyncQdrantClient(
+        url=settings.qdrant_url or None,
+        api_key=settings.qdrant_api_key.get_secret_value() or None,
+        location=None if settings.qdrant_url else ":memory:",
+    )
+    return ChunkVectorRepository(client, settings.qdrant_collection, settings.embedding_dimensions)
+
+
+@lru_cache
+def get_transcript_chunking_service() -> TranscriptChunkingService:
+    settings = get_settings()
+    return TranscriptChunkingService(settings.chunk_lines, settings.chunk_overlap_lines)
+
+
+def get_meeting_upload_service(
+    session: SessionDep,
+    parser: Annotated[TranscriptParsingService, Depends(get_transcript_parsing_service)],
+    chunker: Annotated[TranscriptChunkingService, Depends(get_transcript_chunking_service)],
+    embeddings: Annotated[EmbeddingClient, Depends(get_embedding_client)],
+    vectors: Annotated[ChunkVectorRepository, Depends(get_chunk_vector_repository)],
+) -> MeetingUploadService:
+    return MeetingUploadService(
+        TopicRepository(session), MeetingRepository(session), parser, chunker, embeddings, vectors
+    )
+
+
+def get_meeting_service(session: SessionDep) -> MeetingService:
+    return MeetingService(TopicRepository(session), MeetingRepository(session))

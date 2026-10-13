@@ -1,6 +1,6 @@
 """Reads and writes meetings and their transcript lines."""
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.meeting import Meeting
@@ -84,3 +84,9 @@ class MeetingRepository:
             .order_by(MeetingLine.speaker)
         )
         return list(result.scalars())
+
+    async def delete(self, meeting_id: int) -> None:
+        """Remove a meeting and its lines (used to undo a failed upload)."""
+        await self._session.execute(delete(MeetingLine).where(MeetingLine.meeting_id == meeting_id))
+        await self._session.execute(delete(Meeting).where(Meeting.id == meeting_id))
+        await self._session.commit()

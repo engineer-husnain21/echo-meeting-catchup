@@ -222,3 +222,13 @@ If you are not sure where something goes, ask before building it. A wrong placem
 | Layer | Does | Never does |
 |---|---|---|
 | `parsers/` | Read one file format into transcript lines | Store data, call LLMs or other APIs |
+
+### Retrieval placement (embeddings and vector store)
+
+- `clients/OpenAiCompatibleEmbeddingClient` (Protocol `EmbeddingClient`) is the only code that
+  calls the embeddings API. Provider, model and dimensions come from `.env`.
+- `repositories/ChunkVectorRepository` is the only code that reads or writes Qdrant
+  (vector data is data, so it lives with the other repositories).
+- `MeetingUploadService` calls the embedding client through its Protocol to index uploads.
+  This is the one place where a service uses a client without an agent in between: embedding
+  is plain data processing, not an AI decision. LLM calls still only happen inside agents.

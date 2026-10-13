@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     embedding_api_key: SecretStr = SecretStr("")
     embedding_model: str = "gemini-embedding-001"
     embedding_dimensions: int = 768
+    embedding_passage_task: str = "retrieval.passage"
+    embedding_query_task: str = "retrieval.query"
+    embedding_batch_size: int = 32
 
     deepgram_api_key: SecretStr = SecretStr("")
     deepgram_stt_model: str = "nova-3"
@@ -29,10 +32,13 @@ class Settings(BaseSettings):
 
     qdrant_url: str = ""
     qdrant_api_key: SecretStr = SecretStr("")
+    qdrant_collection: str = "echo_chunks"
 
     database_url: str = "sqlite+aiosqlite:///./echo.db"
 
     max_upload_mb: int = 20
+    chunk_lines: int = 6
+    chunk_overlap_lines: int = 2
 
 
 @lru_cache
