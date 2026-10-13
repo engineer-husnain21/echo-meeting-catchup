@@ -1,0 +1,26 @@
+[project]
+name = "echo-meeting-catchup"
+version = "0.1.0"
+description = "ECHO: multi-agent voice assistant that catches you up on missed meetings"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["\\.venv"]
+
+[[tool.mypy.overrides]]
+module = ["qdrant_client.*", "docx.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
