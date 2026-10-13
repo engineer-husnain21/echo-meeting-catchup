@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr = SecretStr("")
     llm_model: str = "openai/gpt-oss-120b"
 
-    embedding_base_url: str = "https://api.jina.ai/v1/"
+    embedding_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     embedding_api_key: SecretStr = SecretStr("")
-    embedding_model: str = "jina-embeddings-v3"
+    embedding_model: str = "gemini-embedding-001"
     embedding_dimensions: int = 768
 
     deepgram_api_key: SecretStr = SecretStr("")
@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     qdrant_api_key: SecretStr = SecretStr("")
 
     database_url: str = "sqlite+aiosqlite:///./echo.db"
+
+    max_upload_mb: int = 20
 
 
 @lru_cache

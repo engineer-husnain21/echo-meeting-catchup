@@ -203,3 +203,22 @@ When you need something that does not fit an existing folder, follow these steps
 8. **Update this file:** add a row to the tables in sections 1, 2, 3 and 5, so the next developer knows where it lives.
 
 If you are not sure where something goes, ask before building it. A wrong placement is cheap to fix on day one and expensive later.
+
+---
+
+## 12. ECHO project additions (follows section 11)
+
+### `app/parsers/` (suffix `Parser`)
+
+- **One job:** turn the raw bytes of one transcript file format (.vtt, .txt, .docx) into ordered
+  `TranscriptLine` objects (speaker, time, text). It never stores, embeds or calls an LLM.
+- **Place in the flow:** `services → parsers` (a side branch like `services → repositories`).
+  `TranscriptParsingService` picks the parser by file extension and applies the upload rules
+  (allowed types, empty file, size limit, duplicate hash).
+- **Base class:** `BaseTranscriptParser` (one subclass per format). `SpeakerBlockReader` is a
+  shared helper used by the .txt and .docx parsers.
+- **Tests:** `tests/unit/parsers/`.
+
+| Layer | Does | Never does |
+|---|---|---|
+| `parsers/` | Read one file format into transcript lines | Store data, call LLMs or other APIs |
