@@ -35,7 +35,7 @@ class ChunkVectorRepository:
         try:
             await self._client.upsert(collection_name=self._collection, points=points, wait=True)
         except _QDRANT_ERRORS as error:
-            raise ProviderError("The vector store is not available right now.") from error
+            raise self._unavailable("upsert", error) from error
 
     async def search(self, topic_id: int, vector: list[float], limit: int) -> list[ScoredChunk]:
         await self._ensure_collection()
@@ -48,7 +48,7 @@ class ChunkVectorRepository:
                 with_payload=True,
             )
         except _QDRANT_ERRORS as error:
-            raise ProviderError("The vector store is not available right now.") from error
+            raise self._unavailable("search", error) from error
         return [
             ScoredChunk(chunk=TranscriptChunk.model_validate(point.payload), score=point.score)
             for point in result.points
@@ -56,14 +56,15 @@ class ChunkVectorRepository:
         ]
 
     async def delete_meeting(self, meeting_id: int) -> None:
-        await self._ensure_collection()
+        """Best effort cleanup: never raises, so callers can always finish their rollback."""
         try:
+            await self._ensure_collection()
             await self._client.delete(
                 collection_name=self._collection,
                 points_selector=models.FilterSelector(filter=self._match("meeting_id", meeting_id)),
             )
-        except _QDRANT_ERRORS as error:
-            _logger.warning("Could not delete vectors of meeting %s: %s", meeting_id, error)
+        except (ProviderError, *_QDRANT_ERRORS) as error:
+            _logger.warning("Could not delete vectors of meeting %s: %r", meeting_id, error)
 
     async def _ensure_collection(self) -> None:
         if self._ready:
@@ -84,8 +85,14 @@ class ChunkVectorRepository:
                     )
                 _logger.info("Created Qdrant collection %s", self._collection)
         except _QDRANT_ERRORS as error:
-            raise ProviderError("The vector store is not available right now.") from error
+            raise self._unavailable("create collection", error) from error
         self._ready = True
+
+    @staticmethod
+    def _unavailable(action: str, error: Exception) -> ProviderError:
+        """Log the real cause (for debugging) and return a friendly error for the user."""
+        _logger.warning("Qdrant %s failed: %r", action, error)
+        return ProviderError("The vector store is not available right now.")
 
     @staticmethod
     def _match(field: str, value: int) -> models.Filter:

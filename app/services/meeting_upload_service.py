@@ -53,8 +53,8 @@ class MeetingUploadService:
             await self._vectors.upsert(chunks, vectors)
         except ProviderError:
             # Undo, so a retry is not reported as a duplicate and the topic stays consistent.
-            await self._vectors.delete_meeting(meeting.id)
             await self._meetings.delete(meeting.id)
+            await self._vectors.delete_meeting(meeting.id)
             raise
 
         return UploadMeetingResponse(

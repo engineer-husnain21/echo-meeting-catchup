@@ -83,3 +83,22 @@ async def test_upload_when_bad_file_raises_validation_and_stores_nothing(
     with pytest.raises(ValidationError):
         await service.upload(topic.id, bad.name, bad.read_bytes())
     assert await MeetingRepository(db_session).count_by_topic(topic.id) == 0
+
+
+async def test_upload_when_vector_store_unreachable_rolls_back_meeting(
+    db_session: AsyncSession,
+) -> None:
+    parsers = [VttTranscriptParser(), TxtTranscriptParser(), DocxTranscriptParser()]
+    unreachable = AsyncQdrantClient(url="http://127.0.0.1:9", timeout=1)
+    service = MeetingUploadService(
+        TopicRepository(db_session),
+        MeetingRepository(db_session),
+        TranscriptParsingService(parsers, max_upload_bytes=1024 * 1024),
+        TranscriptChunkingService(6, 2),
+        FakeEmbeddingClient(dimensions=64),
+        ChunkVectorRepository(unreachable, "test", 64),
+    )
+    topic = await TopicRepository(db_session).create("Atlas")
+    with pytest.raises(ProviderError, match="vector store"):
+        await service.upload(topic.id, KICKOFF.name, KICKOFF.read_bytes())
+    assert await MeetingRepository(db_session).count_by_topic(topic.id) == 0

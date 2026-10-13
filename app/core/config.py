@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     qdrant_url: str = ""
     qdrant_api_key: SecretStr = SecretStr("")
     qdrant_collection: str = "echo_chunks"
+    qdrant_timeout_seconds: int = 30
 
     database_url: str = "sqlite+aiosqlite:///./echo.db"
 

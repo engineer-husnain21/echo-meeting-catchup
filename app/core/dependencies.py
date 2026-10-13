@@ -79,6 +79,7 @@ def get_chunk_vector_repository() -> ChunkVectorRepository:
         url=settings.qdrant_url or None,
         api_key=settings.qdrant_api_key.get_secret_value() or None,
         location=None if settings.qdrant_url else ":memory:",
+        timeout=settings.qdrant_timeout_seconds,
     )
     return ChunkVectorRepository(client, settings.qdrant_collection, settings.embedding_dimensions)
 
