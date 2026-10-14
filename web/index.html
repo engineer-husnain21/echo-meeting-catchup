@@ -57,11 +57,13 @@
 
     <aside class="echo" aria-label="Talk to ECHO">
       <div id="presence" class="presence idle">
-        <div class="orb" aria-hidden="true">
+        <button id="mic-btn" class="orb" type="button" aria-pressed="false" aria-label="Start talking to ECHO">
           <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
-          <span class="core"></span>
-        </div>
+          <span class="core"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg></span>
+        </button>
         <p id="presence-label" class="presence-label">Ready</p>
+        <p id="mic-hint" class="mic-hint">Tap the circle and ask out loud</p>
+        <p id="caption" class="caption" aria-live="polite"></p>
         <p id="latency" class="latency"></p>
       </div>
 
@@ -96,5 +98,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
 
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/voice.js"></script>
 </body>
 </html>

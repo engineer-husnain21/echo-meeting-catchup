@@ -158,7 +158,15 @@ button, input { font: inherit; color: inherit; }
   display: flex; flex-direction: column; min-height: 0;
 }
 .presence { padding: 26px 20px 12px; text-align: center; }
-.orb { position: relative; width: 132px; height: 132px; margin: 0 auto; }
+.orb {
+  position: relative; display: block; width: 132px; height: 132px; margin: 0 auto;
+  border: 0; padding: 0; background: none; cursor: pointer; border-radius: 50%;
+}
+.orb:hover .core { transform: scale(1.06); }
+.core svg { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; fill: #fff; }
+.orb[aria-pressed="true"] .core { background: var(--nobody); box-shadow: 0 0 0 6px var(--nobody-soft); }
+.mic-hint { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.caption { margin: 6px auto 0; max-width: 300px; min-height: 22px; font-family: var(--serif); font-style: italic; color: var(--ink); }
 .core, .ring { position: absolute; inset: 0; margin: auto; border-radius: 50%; }
 .core {
   width: 46px; height: 46px; background: var(--echo);

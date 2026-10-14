@@ -14,19 +14,31 @@ const state = {
   meetings: [],
   history: [], // [{role: "user" | "echo", text}]
   audio: null,
+  speechText: "", // what ECHO is saying right now (to ignore its own voice on the mic)
   busy: false,
+  listening: false, // set by voice.js while the microphone is on
 };
 
 // ---------- presence ----------
 
 const LABELS = { idle: "Ready", listening: "Listening", thinking: "Thinking", speaking: "Speaking" };
 
+/** Presence to fall back to when ECHO is not thinking or speaking. */
+function resting() {
+  return state.listening ? "listening" : "idle";
+}
+
+export function setListening(on) {
+  state.listening = on;
+  if (!state.busy && !state.audio) setPresence(resting());
+}
+
 export function setPresence(mode) {
   $("presence").className = `presence ${mode}`;
   $("presence-label").textContent = LABELS[mode];
 }
 
-function toast(message) {
+export function toast(message) {
   const el = $("toast");
   el.textContent = message;
   el.hidden = false;
@@ -55,7 +67,7 @@ const SUGGESTIONS = [
 
 function showSuggestions() {
   $("conversation").innerHTML = `<li class="suggestions">
-    <p>Ask anything about these meetings. Answers come with the exact lines they are based on.</p>
+    <p>Tap the circle and ask out loud, or type. Answers come with the exact lines they are based on.</p>
     ${SUGGESTIONS.map((s) => `<button type="button" class="btn-quiet" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}
   </li>`;
 }
@@ -125,7 +137,7 @@ async function refreshBoard(rebuild = false) {
     status.textContent = `The board was not updated: ${error.message}`;
   } finally {
     clearInterval(timer);
-    setPresence("idle");
+    setPresence(resting());
   }
 }
 
@@ -223,10 +235,10 @@ async function converse(call, pick) {
     addTurn("echo", turn.text, turn);
     $("latency").textContent = `Answer ${seconds(result.elapsed_ms)}`;
     if ($("speak-toggle").checked) await speak(turn.text, performance.now());
-    else setPresence("idle");
+    else setPresence(resting());
   } catch (error) {
     addTurn("echo", error.message, { status: "not_discussed" });
-    setPresence("idle");
+    setPresence(resting());
   } finally {
     state.busy = false;
   }
@@ -238,9 +250,11 @@ async function speak(text, started) {
     $("latency").textContent += `, voice ${seconds(performance.now() - started)}`;
     const audio = new Audio(URL.createObjectURL(blob));
     state.audio = audio;
+    state.speechText = text;
     audio.addEventListener("ended", stopSpeaking);
     setPresence("speaking");
     $("stop-btn").hidden = false;
+    state.busy = false; // the user may talk over ECHO (barge-in) while it speaks
     await audio.play();
   } catch (error) {
     toast(`Could not play the answer: ${error.message}`);
@@ -254,12 +268,21 @@ export function stopSpeaking() {
     URL.revokeObjectURL(state.audio.src);
     state.audio = null;
   }
+  state.speechText = "";
   $("stop-btn").hidden = true;
-  setPresence("idle");
+  if (!state.busy) setPresence(resting());
 }
 
 export function isSpeaking() {
   return Boolean(state.audio);
+}
+
+export function speakingText() {
+  return state.speechText;
+}
+
+export function isBusy() {
+  return state.busy;
 }
 
 // ---------- events ----------
