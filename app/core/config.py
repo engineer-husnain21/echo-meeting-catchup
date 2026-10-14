@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     deepgram_api_key: SecretStr = SecretStr("")
     deepgram_stt_model: str = "nova-3"
     deepgram_tts_model: str = "aura-2-thalia-en"
+    deepgram_listen_url: str = "wss://api.deepgram.com/v1/listen"
+    deepgram_speak_url: str = "https://api.deepgram.com/v1/speak"
+    stt_endpointing_ms: int = 300
+    stt_utterance_end_ms: int = 1000
+    tts_max_chars: int = 1500
 
     qdrant_url: str = ""
     qdrant_api_key: SecretStr = SecretStr("")

@@ -12,10 +12,14 @@ from app.agents.answer_agent import AnswerAgent
 from app.agents.extractor_agent import ExtractorAgent
 from app.agents.stance_agent import StanceAgent
 from app.agents.timeline_agent import TimelineAgent
+from app.clients.deepgram_speech_to_text_client import DeepgramSpeechToTextClient
+from app.clients.deepgram_text_to_speech_client import DeepgramTextToSpeechClient
 from app.clients.embedding_client import EmbeddingClient
 from app.clients.llm_client import LlmClient
 from app.clients.open_ai_compatible_embedding_client import OpenAiCompatibleEmbeddingClient
 from app.clients.open_ai_compatible_llm_client import OpenAiCompatibleLlmClient
+from app.clients.speech_to_text_client import SpeechToTextClient
+from app.clients.text_to_speech_client import TextToSpeechClient
 from app.core.config import Settings, get_settings
 from app.core.prompt_loader import PromptLoader
 from app.db.database import Database
@@ -36,6 +40,7 @@ from app.services.question_service import QuestionService
 from app.services.topic_service import TopicService
 from app.services.transcript_chunking_service import TranscriptChunkingService
 from app.services.transcript_parsing_service import TranscriptParsingService
+from app.services.voice_service import VoiceService
 
 
 def get_app_settings() -> Settings:
@@ -183,3 +188,32 @@ def get_question_service(
         top_k=settings.qa_top_k,
         history_turns=settings.qa_history_turns,
     )
+
+
+@lru_cache
+def get_speech_to_text_client() -> SpeechToTextClient:
+    settings = get_settings()
+    return DeepgramSpeechToTextClient(
+        listen_url=settings.deepgram_listen_url,
+        api_key=settings.deepgram_api_key.get_secret_value(),
+        model=settings.deepgram_stt_model,
+        endpointing_ms=settings.stt_endpointing_ms,
+        utterance_end_ms=settings.stt_utterance_end_ms,
+    )
+
+
+@lru_cache
+def get_text_to_speech_client() -> TextToSpeechClient:
+    settings = get_settings()
+    return DeepgramTextToSpeechClient(
+        speak_url=settings.deepgram_speak_url,
+        api_key=settings.deepgram_api_key.get_secret_value(),
+        model=settings.deepgram_tts_model,
+    )
+
+
+def get_voice_service(
+    stt: Annotated[SpeechToTextClient, Depends(get_speech_to_text_client)],
+    tts: Annotated[TextToSpeechClient, Depends(get_text_to_speech_client)],
+) -> VoiceService:
+    return VoiceService(stt, tts, get_settings().tts_max_chars)

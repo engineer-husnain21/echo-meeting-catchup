@@ -11,6 +11,8 @@ from app.core.dependencies import (
     get_database,
     get_embedding_client,
     get_llm_client,
+    get_speech_to_text_client,
+    get_text_to_speech_client,
     get_transcript_chunking_service,
     get_transcript_parsing_service,
 )
@@ -26,6 +28,7 @@ def isolated_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("QDRANT_URL", "")  # in-memory Qdrant, never the real cluster
     monkeypatch.setenv("EMBEDDING_API_KEY", "")
     monkeypatch.setenv("LLM_API_KEY", "")
+    monkeypatch.setenv("DEEPGRAM_API_KEY", "")
     _clear_caches()
     yield
     _clear_caches()
@@ -44,6 +47,8 @@ _CACHED = (
     get_embedding_client,
     get_llm_client,
     get_chunk_vector_repository,
+    get_speech_to_text_client,
+    get_text_to_speech_client,
 )
 
 

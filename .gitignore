@@ -8,3 +8,5 @@ __pycache__/
 *.db
 *.zip
 storage/
+# throwaway local check scripts (they may print key details)
+check_*
