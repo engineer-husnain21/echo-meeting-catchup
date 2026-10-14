@@ -2,8 +2,10 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.core.dependencies import get_database
@@ -20,6 +22,8 @@ from app.routers import (
     topic_router,
     voice_router,
 )
+
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 
 @asynccontextmanager
@@ -50,6 +54,10 @@ def create_app() -> FastAPI:
     app.include_router(question_router.router)
     app.include_router(briefing_router.router)
     app.include_router(voice_router.router)
+
+    # The web UI is served last, so every /api route above keeps priority.
+    if (WEB_DIR / "index.html").is_file():
+        app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
     return app
 
 

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ECHO · Meeting catch-up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="rail" aria-label="Topics and meetings">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">ECHO</span>
+      </div>
+
+      <section class="rail-block">
+        <h2 class="rail-title">Topics</h2>
+        <ul id="topic-list" class="topic-list"></ul>
+        <form id="topic-form" class="inline-form">
+          <input id="topic-name" type="text" placeholder="New topic name" maxlength="120" aria-label="New topic name">
+          <button type="submit" class="btn-quiet">Add</button>
+        </form>
+      </section>
+
+      <section class="rail-block">
+        <h2 class="rail-title">Meetings</h2>
+        <ul id="meeting-list" class="meeting-list"></ul>
+        <label class="upload">
+          <input id="upload-input" type="file" accept=".vtt,.txt,.docx" multiple>
+          <span>Upload transcripts</span>
+        </label>
+        <p class="hint">.vtt, .txt or .docx, named like 2026-10-12_database-review.vtt</p>
+        <ul id="upload-log" class="upload-log"></ul>
+      </section>
+
+      <section class="rail-block you">
+        <label for="user-name" class="rail-title">You are</label>
+        <input id="user-name" type="text" placeholder="Your name as spoken in meetings" maxlength="120">
+      </section>
+    </aside>
+
+    <main class="board" aria-live="polite">
+      <header class="board-head">
+        <div>
+          <h1 id="topic-title">Pick a topic</h1>
+          <p id="board-meta" class="meta"></p>
+        </div>
+        <button id="rebuild-btn" class="btn-quiet" type="button" hidden>Re-read all meetings</button>
+      </header>
+      <div id="board-status" class="board-status" hidden></div>
+      <div id="board-body"></div>
+    </main>
+
+    <aside class="echo" aria-label="Talk to ECHO">
+      <div id="presence" class="presence idle">
+        <div class="orb" aria-hidden="true">
+          <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+          <span class="core"></span>
+        </div>
+        <p id="presence-label" class="presence-label">Ready</p>
+        <p id="latency" class="latency"></p>
+      </div>
+
+      <div class="echo-actions">
+        <button id="catchup-btn" class="btn-primary" type="button">Catch me up</button>
+        <button id="stop-btn" class="btn-quiet" type="button" hidden>Stop speaking</button>
+        <label class="toggle"><input id="speak-toggle" type="checkbox" checked> Speak answers</label>
+      </div>
+
+      <ol id="conversation" class="conversation"></ol>
+
+      <form id="ask-form" class="ask">
+        <input id="ask-input" type="text" placeholder="Ask about this project" maxlength="1000" aria-label="Your question" autocomplete="off">
+        <button type="submit" class="btn-primary">Ask</button>
+      </form>
+    </aside>
+  </div>
+
+  <div id="drawer" class="drawer" hidden>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <header class="drawer-head">
+        <div>
+          <h2 id="drawer-title"></h2>
+          <p id="drawer-meta" class="meta"></p>
+        </div>
+        <button id="drawer-close" class="btn-quiet" type="button">Close</button>
+      </header>
+      <ol id="drawer-lines" class="transcript"></ol>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
