@@ -1,4 +1,5 @@
-"""Prepares the question context and runs the Answer agent.
+"""Prepares the context and runs the conversation agents: Answer (questions) and Narrator
+(catch-up briefing).
 
 No DB access here: the service passes in the found chunks and the stored board.
 """
@@ -6,12 +7,16 @@ No DB access here: the service passes in the found chunks and the stored board.
 import re
 
 from app.agents.answer_agent import AnswerAgent
+from app.agents.narrator_agent import NarratorAgent
 from app.schemas.answer_build_input import AnswerBuildInput
 from app.schemas.answer_build_output import AnswerBuildOutput
 from app.schemas.answer_input import AnswerInput
-from app.schemas.board_response import BoardResponse, Quote
+from app.schemas.board_response import BoardMeeting, BoardResponse, Quote
+from app.schemas.briefing_build_input import BriefingBuildInput
+from app.schemas.briefing_build_output import BriefingBuildOutput
 from app.schemas.chat_turn import ChatTurn
 from app.schemas.line_ref import LineRef
+from app.schemas.narrator_input import NarratorInput
 from app.schemas.scored_chunk import ScoredChunk
 
 _LINE_NUMBER = re.compile(r"^\[L(\d+)")
@@ -19,8 +24,9 @@ _SPEAKER = {"user": "User", "echo": "ECHO"}
 
 
 class AnswerOrchestrator:
-    def __init__(self, answer: AnswerAgent) -> None:
+    def __init__(self, answer: AnswerAgent, narrator: NarratorAgent) -> None:
         self._answer = answer
+        self._narrator = narrator
 
     async def run(self, input: AnswerBuildInput) -> AnswerBuildOutput:
         order = {m.id: index for index, m in enumerate(input.meetings)}
@@ -30,9 +36,7 @@ class AnswerOrchestrator:
             AnswerInput(
                 question=input.question,
                 user_name=input.user_name,
-                meetings="\n".join(
-                    f"M{m.id} | {m.meeting_date} | {m.title}" for m in input.meetings
-                ),
+                meetings=_meeting_rows(input.meetings),
                 board_facts=facts,
                 excerpts=excerpts,
                 conversation=_conversation(input.history),
@@ -42,6 +46,21 @@ class AnswerOrchestrator:
         return AnswerBuildOutput(
             output=output, shown_lines=[LineRef(meeting_id=m, line=n) for m, n in shown]
         )
+
+    async def brief(self, input: BriefingBuildInput) -> BriefingBuildOutput:
+        facts, refs = _board_facts(input.board)
+        output = await self._narrator.run(
+            NarratorInput(
+                user_name=input.user_name,
+                meetings=_meeting_rows(input.meetings),
+                board_facts=facts,
+            )
+        )
+        return BriefingBuildOutput(output=output, shown_lines=refs)
+
+
+def _meeting_rows(meetings: list[BoardMeeting]) -> str:
+    return "\n".join(f"M{m.id} | {m.meeting_date} | {m.title}" for m in meetings)
 
 
 def _excerpts(chunks: list[ScoredChunk], order: dict[int, int]) -> tuple[str, list[LineRef]]:

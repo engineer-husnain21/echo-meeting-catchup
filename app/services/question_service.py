@@ -1,8 +1,7 @@
 """Answers a spoken or typed question about a topic, with grounded citations.
 
 Flow: find matching chunks (embeddings + vector store), load the stored board, let the
-orchestrator run the Answer agent, then keep only citations that point at lines the agent
-was shown and that exist in the DB. Quotes are copied from the DB, never from the LLM.
+orchestrator run the Answer agent, then let CitationService keep only grounded citations.
 """
 
 import time
@@ -20,13 +19,13 @@ from app.schemas.answer_build_input import AnswerBuildInput
 from app.schemas.answer_output import AnswerOutput
 from app.schemas.answer_response import AnswerResponse
 from app.schemas.ask_question_request import AskQuestionRequest
-from app.schemas.board_response import BoardMeeting, Quote
+from app.schemas.board_response import BoardMeeting
 from app.schemas.line_ref import LineRef
+from app.services.citation_service import CitationService
 
 _logger = get_logger("questions")
 NOT_DISCUSSED = "That wasn't discussed in these meetings."
 NO_MEETINGS = "There are no meetings in this topic yet. Upload a transcript first."
-MAX_CITATIONS = 5
 _RETRIEVAL_TURNS = 2  # earlier user questions added to the search text for follow-ups
 
 
@@ -39,6 +38,7 @@ class QuestionService:
         embeddings: EmbeddingClient,
         vectors: ChunkVectorRepository,
         orchestrator: AnswerOrchestrator,
+        citations: CitationService,
         top_k: int,
         history_turns: int,
     ) -> None:
@@ -48,6 +48,7 @@ class QuestionService:
         self._embeddings = embeddings
         self._vectors = vectors
         self._orchestrator = orchestrator
+        self._citations = citations
         self._top_k = top_k
         self._history_turns = history_turns
 
@@ -95,7 +96,7 @@ class QuestionService:
         if output.status == "clarify":
             return AnswerResponse(status="clarify", answer=output.answer, elapsed_ms=0)
 
-        quotes = await self._quotes(output.citations, shown, meetings)
+        quotes = await self._citations.quotes(output.citations, shown, meetings)
         if output.status == "not_discussed":
             return AnswerResponse(
                 status="not_discussed",
@@ -109,37 +110,3 @@ class QuestionService:
         return AnswerResponse(
             status="answered", answer=output.answer, citations=quotes, elapsed_ms=0
         )
-
-    async def _quotes(
-        self, citations: list[LineRef], shown: list[LineRef], meetings: list[Meeting]
-    ) -> list[Quote]:
-        allowed = {(r.meeting_id, r.line) for r in shown}
-        by_id = {m.id: m for m in meetings}
-        wanted = list(
-            dict.fromkeys(
-                (c.meeting_id, c.line)
-                for c in citations
-                if (c.meeting_id, c.line) in allowed and c.meeting_id in by_id
-            )
-        )[:MAX_CITATIONS]
-        quotes: list[Quote] = []
-        loaded: dict[int, dict[int, Quote]] = {}
-        for meeting_id, line in wanted:
-            if meeting_id not in loaded:
-                meeting = by_id[meeting_id]
-                loaded[meeting_id] = {
-                    row.line_number: Quote(
-                        meeting_id=meeting.id,
-                        meeting_title=meeting.title,
-                        meeting_date=meeting.meeting_date,
-                        line=row.line_number,
-                        speaker=row.speaker,
-                        start_seconds=row.start_seconds,
-                        text=row.text,
-                    )
-                    for row in await self._meetings.get_lines(meeting_id)
-                }
-            quote = loaded[meeting_id].get(line)
-            if quote:
-                quotes.append(quote)
-        return quotes

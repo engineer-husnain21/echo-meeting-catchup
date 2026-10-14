@@ -5,6 +5,7 @@ from qdrant_client import AsyncQdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.answer_agent import AnswerAgent
+from app.agents.narrator_agent import NarratorAgent
 from app.clients.embedding_client import EmbeddingPurpose
 from app.core.exceptions import NotFoundError
 from app.core.prompt_loader import PromptLoader
@@ -18,6 +19,7 @@ from app.repositories.meeting_repository import MeetingRepository
 from app.repositories.topic_repository import TopicRepository
 from app.schemas.ask_question_request import AskQuestionRequest
 from app.schemas.chat_turn import ChatTurn
+from app.services.citation_service import CitationService
 from app.services.meeting_upload_service import MeetingUploadService
 from app.services.question_service import NO_MEETINGS, NOT_DISCUSSED, QuestionService
 from app.services.transcript_chunking_service import TranscriptChunkingService
@@ -64,7 +66,8 @@ async def _setup(
         BoardRepository(session),
         embeddings,
         vectors,
-        AnswerOrchestrator(AnswerAgent(llm, PromptLoader())),
+        AnswerOrchestrator(AnswerAgent(llm, PromptLoader()), NarratorAgent(llm, PromptLoader())),
+        CitationService(MeetingRepository(session)),
         top_k=10,  # the kickoff has 6 chunks, so every line is shown
         history_turns=4,
     )

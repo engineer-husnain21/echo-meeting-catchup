@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 
 from app.agents.answer_agent import AnswerAgent
+from app.agents.narrator_agent import NarratorAgent
 from app.core.prompt_loader import PromptLoader
 from app.orchestrators.answer_orchestrator import AnswerOrchestrator
 from app.schemas.answer_build_input import AnswerBuildInput
@@ -16,6 +17,12 @@ from app.schemas.chat_turn import ChatTurn
 from app.schemas.scored_chunk import ScoredChunk
 from app.schemas.transcript_chunk import TranscriptChunk
 from tests.fakes.fake_llm_client import FakeLlmClient
+
+
+def _orchestrator(llm: FakeLlmClient) -> AnswerOrchestrator:
+    prompts = PromptLoader()
+    return AnswerOrchestrator(AnswerAgent(llm, prompts), NarratorAgent(llm, prompts))
+
 
 MEETINGS = [
     BoardMeeting(id=1, title="Kickoff", meeting_date=date(2026, 9, 28)),
@@ -88,7 +95,7 @@ def _board() -> BoardResponse:
 
 async def test_run_when_chunks_overlap_merges_lines_in_time_order() -> None:
     llm = FakeLlmClient([{"status": "answered", "answer": "ok"}])
-    result = await AnswerOrchestrator(AnswerAgent(llm, PromptLoader())).run(
+    result = await _orchestrator(llm).run(
         AnswerBuildInput(
             question="q",
             meetings=MEETINGS,
@@ -105,7 +112,7 @@ async def test_run_when_chunks_overlap_merges_lines_in_time_order() -> None:
 
 async def test_run_when_board_exists_passes_facts_with_history_and_unassigned() -> None:
     llm = FakeLlmClient([{"status": "answered", "answer": "ok"}])
-    result = await AnswerOrchestrator(AnswerAgent(llm, PromptLoader())).run(
+    result = await _orchestrator(llm).run(
         AnswerBuildInput(
             question="who owns it?",
             user_name="Hussnain Razaq",
@@ -121,4 +128,18 @@ async def test_run_when_board_exists_passes_facts_with_history_and_unassigned() 
     assert "earlier: Use PostgreSQL. (2026-10-05) [M1 L15]" in user
     assert "owner=Unassigned" in user
     assert "User: tell me about the runbook" in user
+    assert {(r.meeting_id, r.line) for r in result.shown_lines} == {(3, 7), (1, 15), (1, 20)}
+
+
+async def test_brief_when_board_given_sends_facts_and_returns_shown_lines() -> None:
+    from app.schemas.briefing_build_input import BriefingBuildInput
+
+    llm = FakeLlmClient([{"briefing": "Here's where things stand.", "citations": ["M3 L7"]}])
+    result = await _orchestrator(llm).brief(
+        BriefingBuildInput(user_name="Hussnain Razaq", meetings=MEETINGS, board=_board())
+    )
+    user = llm.calls[0][1]
+    assert "Listener: Hussnain Razaq" in user and "owner=Unassigned" in user
+    assert "M3 | 2026-10-05 | Data model review" in user
+    assert result.output.briefing.startswith("Here's")
     assert {(r.meeting_id, r.line) for r in result.shown_lines} == {(3, 7), (1, 15), (1, 20)}

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.answer_agent import AnswerAgent
 from app.agents.extractor_agent import ExtractorAgent
+from app.agents.narrator_agent import NarratorAgent
 from app.agents.stance_agent import StanceAgent
 from app.agents.timeline_agent import TimelineAgent
 from app.clients.deepgram_speech_to_text_client import DeepgramSpeechToTextClient
@@ -34,6 +35,8 @@ from app.repositories.meeting_repository import MeetingRepository
 from app.repositories.topic_repository import TopicRepository
 from app.services.board_merge_service import BoardMergeService
 from app.services.board_service import BoardService
+from app.services.briefing_service import BriefingService
+from app.services.citation_service import CitationService
 from app.services.meeting_service import MeetingService
 from app.services.meeting_upload_service import MeetingUploadService
 from app.services.question_service import QuestionService
@@ -168,7 +171,8 @@ def get_board_service(
 def get_answer_orchestrator(
     llm: Annotated[LlmClient, Depends(get_llm_client)],
 ) -> AnswerOrchestrator:
-    return AnswerOrchestrator(AnswerAgent(llm, PromptLoader()))
+    prompts = PromptLoader()
+    return AnswerOrchestrator(AnswerAgent(llm, prompts), NarratorAgent(llm, prompts))
 
 
 def get_question_service(
@@ -185,6 +189,7 @@ def get_question_service(
         embeddings,
         vectors,
         orchestrator,
+        CitationService(MeetingRepository(session)),
         top_k=settings.qa_top_k,
         history_turns=settings.qa_history_turns,
     )
@@ -217,3 +222,16 @@ def get_voice_service(
     tts: Annotated[TextToSpeechClient, Depends(get_text_to_speech_client)],
 ) -> VoiceService:
     return VoiceService(stt, tts, get_settings().tts_max_chars)
+
+
+def get_briefing_service(
+    session: SessionDep,
+    orchestrator: Annotated[AnswerOrchestrator, Depends(get_answer_orchestrator)],
+) -> BriefingService:
+    return BriefingService(
+        TopicRepository(session),
+        MeetingRepository(session),
+        BoardRepository(session),
+        orchestrator,
+        CitationService(MeetingRepository(session)),
+    )
