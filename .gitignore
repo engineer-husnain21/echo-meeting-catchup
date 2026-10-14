@@ -10,3 +10,5 @@ __pycache__/
 storage/
 # throwaway local check scripts (they may print key details)
 check_*
+
+install_step*.py
