@@ -13,6 +13,10 @@ _logger = get_logger("llm")
 _JSON_ATTEMPTS = 2
 _DEFAULT_WAIT_SECONDS = 10.0
 _MAX_WAIT_SECONDS = 30.0
+# Models sometimes write non-breaking hyphens and spaces; they look broken in terminals and TTS.
+_PLAIN_TEXT = str.maketrans(
+    {"\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2212": "-", "\u00a0": " ", "\u202f": " "}
+)
 
 
 class OpenAiCompatibleLlmClient:
@@ -38,7 +42,7 @@ class OpenAiCompatibleLlmClient:
         for attempt in range(1, _JSON_ATTEMPTS + 1):
             text = await self._complete(system, user)
             try:
-                parsed = json.loads(_strip_fences(text))
+                parsed = json.loads(_strip_fences(text).translate(_PLAIN_TEXT))
                 if isinstance(parsed, dict):
                     return parsed
             except json.JSONDecodeError:

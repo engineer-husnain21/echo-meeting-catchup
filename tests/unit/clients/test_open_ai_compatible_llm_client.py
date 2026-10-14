@@ -89,3 +89,13 @@ async def test_complete_json_when_rate_limited_waits_and_retries(monkeypatch) ->
     monkeypatch.setattr(client._client.chat.completions, "create", fake_create)
     assert await client.complete_json("s", "u") == {"ok": 1}
     assert waits == [2.0]
+
+
+async def test_complete_json_when_odd_hyphens_replaces_them(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    client = _client()
+
+    async def fake_create(**_: Any) -> SimpleNamespace:
+        return _reply('{"text": "event\u2011driven\u00a0pipeline"}')
+
+    monkeypatch.setattr(client._client.chat.completions, "create", fake_create)
+    assert await client.complete_json("sys", "user") == {"text": "event-driven pipeline"}
