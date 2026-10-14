@@ -97,8 +97,9 @@ def _board_facts(board: BoardResponse) -> tuple[str, list[LineRef]]:
         current = d.current
         by = f"by {current.decided_by}, " if current.decided_by else ""
         reason = f" Reason: {current.reason}" if current.reason else ""
+        changed = f"CHANGED {len(d.history)}x, mention it | " if d.history else ""
         row = (
-            f"decision | {d.subject} | now: {current.summary}{reason} "
+            f"decision | {d.subject} | {changed}now: {current.summary}{reason} "
             f"({by}{current.meeting_date}) {tags(current.quotes)}"
         )
         for old in d.history:

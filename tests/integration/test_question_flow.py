@@ -49,7 +49,10 @@ def test_question_flow_when_board_built_answers_from_board_with_db_quotes(setup)
     assert body["citations"][0]["meeting_title"] == "Data model review"
     assert "MongoDB" in body["citations"][0]["text"]
     assert body["elapsed_ms"] >= 0
-    assert "decision | database choice | now: Switch to MongoDB." in llm.calls[0][1]
+    assert (
+        "decision | database choice | CHANGED 1x, mention it | now: Switch to MongoDB."
+        in (llm.calls[0][1])
+    )
 
 
 def test_question_flow_when_question_blank_returns_400(setup) -> None:  # type: ignore[no-untyped-def]

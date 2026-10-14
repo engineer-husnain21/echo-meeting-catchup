@@ -35,9 +35,23 @@ export function quoteList(quotes) {
   return `<ul class="quotes">${items}</ul>`;
 }
 
+/** Same person if the first names match, allowing one spelling slip ("Husnain" vs "Hussnain"). */
 export function isMine(owner, userName) {
   if (!owner || !userName) return false;
-  const a = owner.toLowerCase().trim().split(/\s+/);
-  const b = userName.toLowerCase().trim().split(/\s+/);
-  return a.join(" ") === b.join(" ") || a[0] === b[0];
+  const a = owner.toLowerCase().trim().split(/\s+/)[0];
+  const b = userName.toLowerCase().trim().split(/\s+/)[0];
+  return a === b || (Math.min(a.length, b.length) >= 4 && editDistance(a, b) <= 1);
+}
+
+function editDistance(a, b) {
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost);
+    }
+    previous = current;
+  }
+  return previous[b.length];
 }

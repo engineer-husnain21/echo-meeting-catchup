@@ -122,9 +122,8 @@ async def test_run_when_board_exists_passes_facts_with_history_and_unassigned() 
         )
     )
     user = llm.calls[0][1]
-    assert "now: Use MongoDB. Reason: Schema changes often. (by Maya Chen, 2026-10-05) [M3 L7]" in (
-        user
-    )
+    assert "CHANGED 1x, mention it | now: Use MongoDB." in user
+    assert "(by Maya Chen, 2026-10-05) [M3 L7]" in user
     assert "earlier: Use PostgreSQL. (2026-10-05) [M1 L15]" in user
     assert "owner=Unassigned" in user
     assert "User: tell me about the runbook" in user
