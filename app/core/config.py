@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_api_key: SecretStr = SecretStr("")
     llm_model: str = "openai/gpt-oss-120b"
-    llm_reasoning_effort: str = "low"
+    llm_reasoning_effort: str = "medium"
     llm_max_tokens: int = 4000
     llm_timeout_seconds: int = 60
     llm_rate_limit_retries: int = 3
