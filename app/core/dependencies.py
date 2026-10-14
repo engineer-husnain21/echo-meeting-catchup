@@ -8,6 +8,7 @@ from fastapi import Depends
 from qdrant_client import AsyncQdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.answer_agent import AnswerAgent
 from app.agents.extractor_agent import ExtractorAgent
 from app.agents.stance_agent import StanceAgent
 from app.agents.timeline_agent import TimelineAgent
@@ -18,6 +19,7 @@ from app.clients.open_ai_compatible_llm_client import OpenAiCompatibleLlmClient
 from app.core.config import Settings, get_settings
 from app.core.prompt_loader import PromptLoader
 from app.db.database import Database
+from app.orchestrators.answer_orchestrator import AnswerOrchestrator
 from app.orchestrators.board_orchestrator import BoardOrchestrator
 from app.parsers.docx_transcript_parser import DocxTranscriptParser
 from app.parsers.txt_transcript_parser import TxtTranscriptParser
@@ -30,6 +32,7 @@ from app.services.board_merge_service import BoardMergeService
 from app.services.board_service import BoardService
 from app.services.meeting_service import MeetingService
 from app.services.meeting_upload_service import MeetingUploadService
+from app.services.question_service import QuestionService
 from app.services.topic_service import TopicService
 from app.services.transcript_chunking_service import TranscriptChunkingService
 from app.services.transcript_parsing_service import TranscriptParsingService
@@ -154,4 +157,29 @@ def get_board_service(
         BoardRepository(session),
         orchestrator,
         BoardMergeService(),
+    )
+
+
+def get_answer_orchestrator(
+    llm: Annotated[LlmClient, Depends(get_llm_client)],
+) -> AnswerOrchestrator:
+    return AnswerOrchestrator(AnswerAgent(llm, PromptLoader()))
+
+
+def get_question_service(
+    session: SessionDep,
+    embeddings: Annotated[EmbeddingClient, Depends(get_embedding_client)],
+    vectors: Annotated[ChunkVectorRepository, Depends(get_chunk_vector_repository)],
+    orchestrator: Annotated[AnswerOrchestrator, Depends(get_answer_orchestrator)],
+) -> QuestionService:
+    settings = get_settings()
+    return QuestionService(
+        TopicRepository(session),
+        MeetingRepository(session),
+        BoardRepository(session),
+        embeddings,
+        vectors,
+        orchestrator,
+        top_k=settings.qa_top_k,
+        history_turns=settings.qa_history_turns,
     )

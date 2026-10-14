@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     extract_window_lines: int = 150
     stance_max_lines: int = 400
 
+    qa_top_k: int = 8
+    qa_history_turns: int = 6
+
 
 @lru_cache
 def get_settings() -> Settings:
